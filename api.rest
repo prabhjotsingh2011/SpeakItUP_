@@ -1,0 +1,18 @@
+# POST http://localhost:5500/api/send-otp HTTP/1.1
+# Content-Type: application/json
+
+
+# {
+#     "phone": "+917004335954"
+# }
+
+###
+POST http://localhost:5500/api/verify-otp HTTP/1.1
+Content-Type: application/json
+
+
+{
+    "phone": "+917004335954",
+    "otp":1465,
+    "hash":"5392b2d5cdc9ffb8b51182143afa90f969d2be91c04ab68adf57108d68b3ab1f.1639752891917"
+}
