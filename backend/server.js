@@ -58,10 +58,19 @@ io.on('connection', (socket) => {
         const clients = Array.from(io.sockets.adapter.rooms.get(roomId) || [])
 
         clients.forEach(clientId => {
-            io.to(clientId).emit(ACTIONS.ADD_PEER)
+            // sending offer to each and every one in the room 
+            io.to(clientId).emit(ACTIONS.ADD_PEER,{
+                peerId: socket.id,
+                createOffer:false,
+                user:user
+            })
         })
 
-        socket.emit(ACTIONS.ADD_PEER,{})
+        socket.emit(ACTIONS.ADD_PEER,{
+            peerId:clientId,
+            createOffer:true,
+            user:socketUserMappping[clientId]
+        })
 
         socket.join(roomId)
         // console.log(clients);
