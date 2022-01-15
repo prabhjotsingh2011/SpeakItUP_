@@ -64,17 +64,38 @@ io.on('connection', (socket) => {
                 createOffer:false,
                 user:user
             })
+
+            socket.emit(ACTIONS.ADD_PEER,{
+                peerId:clientId, 
+                createOffer:true,   
+                user:socketUserMappping[clientId]
+            })
         })
 
-        socket.emit(ACTIONS.ADD_PEER,{
-            peerId:clientId,
-            createOffer:true,
-            user:socketUserMappping[clientId]
-        })
 
         socket.join(roomId)
         // console.log(clients);
     })
+
+    //Handle relay Ice 
+    socket.on(ACTIONS.RELAY_ICE,({peerId,icecandidate})=>{
+        io.to(peerId).emit(ACTIONS.ICE_CANDIDATE,{
+            peerId:socket.id,
+            icecandidate 
+        })
+    })
+
+    //handle replay sdp or offer
+    socket.on(ACTIONS.RELAY_SDP,({peerId,sessionDescription})=>{
+        io.to(peerId).emit(ACTIONS.SESSION_DESCRIPTION,{
+            peerId:socket.id,
+            sessionDescription
+        }) 
+    })
+
+
+    //remove peer 
+
 
 })
 
