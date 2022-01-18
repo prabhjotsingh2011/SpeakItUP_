@@ -59,16 +59,16 @@ io.on('connection', (socket) => {
 
         clients.forEach(clientId => {
             // sending offer to each and every one in the room 
-            io.to(clientId).emit(ACTIONS.ADD_PEER,{
+            io.to(clientId).emit(ACTIONS.ADD_PEER, {
                 peerId: socket.id,
-                createOffer:false,
-                user:user
+                createOffer: false,
+                user: user
             })
 
-            socket.emit(ACTIONS.ADD_PEER,{
-                peerId:clientId, 
-                createOffer:true,   
-                user:socketUserMappping[clientId]
+            socket.emit(ACTIONS.ADD_PEER, {
+                peerId: clientId,
+                createOffer: true,
+                user: socketUserMappping[clientId]
             })
         })
 
@@ -78,24 +78,51 @@ io.on('connection', (socket) => {
     })
 
     //Handle relay Ice 
-    socket.on(ACTIONS.RELAY_ICE,({peerId,icecandidate})=>{
-        io.to(peerId).emit(ACTIONS.ICE_CANDIDATE,{
-            peerId:socket.id,
-            icecandidate 
+    socket.on(ACTIONS.RELAY_ICE, ({ peerId, icecandidate }) => {
+        io.to(peerId).emit(ACTIONS.ICE_CANDIDATE, {
+            peerId: socket.id,
+            icecandidate
         })
     })
 
     //handle replay sdp or offer
-    socket.on(ACTIONS.RELAY_SDP,({peerId,sessionDescription})=>{
-        io.to(peerId).emit(ACTIONS.SESSION_DESCRIPTION,{
-            peerId:socket.id,
+    socket.on(ACTIONS.RELAY_SDP, ({ peerId, sessionDescription }) => {
+        io.to(peerId).emit(ACTIONS.SESSION_DESCRIPTION, {
+            peerId: socket.id,
             sessionDescription
-        }) 
+        })
     })
+
 
 
     //remove peer 
 
+    const leaveRoom = ({ roomId }) => {
+        const { rooms } = socket;
+        Array.from(rooms).forEach(roomId => {
+            const clients = Array.from(io.sockets.adapter.rooms.get(roomId))
+
+            clients.forEach(clientId => {
+                io.to(clientId).emit(ACTIONS.REMOVE_PEER, {
+                    peerId: socket.id,
+                    userId: socketUserMappping[socket.id].id
+                })
+
+                socket.emit(ACTIONS.REMOVE_PEER, {
+                    peerId: clientId,
+                    userId: socketUserMappping[clientId]?.id
+                })
+            })
+            
+
+
+            socket.leave(roomId)
+        })
+        delete socketUserMappping[socket.id];
+
+    }
+
+    socket.on(ACTIONS.LEAVE, leaveRoom);
 
 })
 
