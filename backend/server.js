@@ -94,27 +94,25 @@ io.on('connection', (socket) => {
     })
 
 
-
     //remove peer 
 
     const leaveRoom = ({ roomId }) => {
         const { rooms } = socket;
         Array.from(rooms).forEach(roomId => {
             const clients = Array.from(io.sockets.adapter.rooms.get(roomId))
-
             clients.forEach(clientId => {
                 io.to(clientId).emit(ACTIONS.REMOVE_PEER, {
                     peerId: socket.id,
-                    userId: socketUserMappping[socket.id].id
+                    // userId: socketUserMappping[socket.id]?.id
+                    userId: socketUserMappping[socket.id]?.id
                 })
 
                 socket.emit(ACTIONS.REMOVE_PEER, {
                     peerId: clientId,
+                    // userId: socketUserMappping[clientId]?.id
                     userId: socketUserMappping[clientId]?.id
                 })
             })
-            
-
 
             socket.leave(roomId)
         })
@@ -123,7 +121,7 @@ io.on('connection', (socket) => {
     }
 
     socket.on(ACTIONS.LEAVE, leaveRoom);
-
+    socket.on('disconnecting', leaveRoom)  //pre build event of socket
 })
 
 server.listen(PORT, () => {

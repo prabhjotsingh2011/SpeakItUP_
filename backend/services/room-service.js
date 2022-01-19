@@ -20,6 +20,12 @@ class roomService{
         const rooms=await roomModel.find({roomType:{$in: types}}).populate('speakers').populate('ownerId').exec()
         return rooms;
     }
+    async getRoom(roomId){
+        const rooms=await roomModel.find({_id:roomId})
+        return rooms;
+    }
+
+
 }
 
 module.exports=new roomService()

@@ -71,11 +71,11 @@ export const useWebRTC = (roomId, user) => {
 
             })
         })
-
+        //leaving the room 
+        
         return () => {
-            //leaving the room 
             localMediaStream.current.getTracks().forEach(track => track.stop());
-
+    
             socket.current.emit(ACTIONS.LEAVE, { roomId })
         }
     }, []);
@@ -126,7 +126,7 @@ export const useWebRTC = (roomId, user) => {
 
 
         //create offer
-        if (createOffer) {
+        if (createOffer){
             const offer = await connections.current[peerId].createOffer();
 
             await connections.current[peerId].setLocalDescription(offer)
@@ -165,27 +165,41 @@ export const useWebRTC = (roomId, user) => {
     useEffect(() => {
         const handleRemoteSDP = async ({ peerId, sessionDescription: remoteSessionDescrition }) => {
 
+            try {
+                
+                if(!remoteSessionDescrition) throw Error("error");
+                
+                connections.current[peerId].setRemoteDescription(
+                    new RTCSessionDescription(remoteSessionDescrition)
+                )
 
-            connections.current[peerId].setRemoteDescription(
-                new RTCSessionDescription(remoteSessionDescrition)
-            )
+                connections.current[peerId].setRemoteDescription(remoteSessionDescrition)
 
-            // connections.current[peerId].setRemoteDescription(remoteSessionDescrition)
+                // if sessionDecription is type of offer the create Answer
+                if (remoteSessionDescrition.type === 'offer') {
+                    const connection = connections.current[peerId];
+
+                    const answer = await connection.createAnswer()
+
+                    connection.setLocalDescription(answer);
+
+                    socket.current.emit(ACTIONS.RELAY_SDP, {
+                        peerId,
+                        sessionDescription: answer
+                    })
+                }
+                
+            } catch (error) {
+                // console.log("remoteSessionDescrition is undefined ")
+            }
+
             
 
-            // if sessionDecription is type of offer the create Answer
-            if (remoteSessionDescrition.type === 'offer') {
-                const connection = connections.current[peerId];
+            
 
-                const answer = await connection.createAnswer()
+            
 
-                connection.setLocalDescription(answer);
-
-                socket.current.emit(ACTIONS.RELAY_SDP, {
-                    peerId,
-                    sessionDescription: answer
-                })
-            }
+            
         }
 
         socket.current.on(ACTIONS.SESSION_DESCRIPTION, handleRemoteSDP)
