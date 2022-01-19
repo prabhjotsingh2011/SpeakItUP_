@@ -32,6 +32,8 @@ export const useWebRTC = (roomId, user) => {
     const localMediaStream = useRef(null); // storing the instance of media stream for audio 
     const socket = useRef(null);
 
+    const clientsRef = useRef([]);
+
     useEffect(() => {
         socket.current = socketInit()
     }, [])
@@ -58,7 +60,7 @@ export const useWebRTC = (roomId, user) => {
             })
         }
         startCaputure().then(() => {
-            addNewClient(user, () => {
+            addNewClient({ ...user, muted: true }, () => {
                 const localElement = audioElements.current[user.id];
 
                 if (localElement) {
@@ -72,10 +74,10 @@ export const useWebRTC = (roomId, user) => {
             })
         })
         //leaving the room 
-        
+
         return () => {
             localMediaStream.current.getTracks().forEach(track => track.stop());
-    
+
             socket.current.emit(ACTIONS.LEAVE, { roomId })
         }
     }, []);
@@ -99,7 +101,7 @@ export const useWebRTC = (roomId, user) => {
 
         //handle ontrack on this connection           
         connections.current[peerId].ontrack = ({ streams: [remoteStream] }) => {
-            addNewClient(remoteUser, () => {
+            addNewClient({ ...remoteUser, muted: true }, () => {
                 if (audioElements.current[remoteUser.id]) {
                     audioElements.current[remoteUser.id].srcObject = remoteStream
                 }
@@ -126,7 +128,7 @@ export const useWebRTC = (roomId, user) => {
 
 
         //create offer
-        if (createOffer){
+        if (createOffer) {
             const offer = await connections.current[peerId].createOffer();
 
             await connections.current[peerId].setLocalDescription(offer)
@@ -166,9 +168,9 @@ export const useWebRTC = (roomId, user) => {
         const handleRemoteSDP = async ({ peerId, sessionDescription: remoteSessionDescrition }) => {
 
             try {
-                
-                if(!remoteSessionDescrition) throw Error("error");
-                
+
+                if (!remoteSessionDescrition) throw Error("error");
+
                 connections.current[peerId].setRemoteDescription(
                     new RTCSessionDescription(remoteSessionDescrition)
                 )
@@ -188,18 +190,18 @@ export const useWebRTC = (roomId, user) => {
                         sessionDescription: answer
                     })
                 }
-                
+
             } catch (error) {
                 // console.log("remoteSessionDescrition is undefined ")
             }
 
-            
 
-            
 
-            
 
-            
+
+
+
+
         }
 
         socket.current.on(ACTIONS.SESSION_DESCRIPTION, handleRemoteSDP)
@@ -227,9 +229,70 @@ export const useWebRTC = (roomId, user) => {
         }
     }, [])
 
+    useEffect(() => {
+        clientsRef.current=clients
+    },[clients])
+
+    //listen for mute and unmute
+    useEffect(() => {
+        socket.current.on(ACTIONS.MUTE, ({peerId,userId})=>{
+            setMute(true,userId);
+        })
+        socket.current.on(ACTIONS.UNMUTE, ({peerId,userId})=>{
+            setMute(false,userId);
+        })
+        
+        
+        const setMute = (mute,userId) => {
+            const clientIdx=clientsRef.current.map((client) => client.id).indexOf(userId);
+
+            console.log('====================================');
+            console.log('idx', clientIdx);
+            console.log('====================================');
+
+            const connectedClients=JSON.parse(
+                JSON.stringify(clientsRef.current)
+            )
+
+
+            if(clientIdx > -1){
+                connectedClients[clientIdx].muted=mute
+                setClients(connectedClients)
+            } 
+        }
+    },[clients])
     const provideRef = (instance, userId) => {
         audioElements.current[userId] = instance
     }
 
-    return { clients, provideRef }
+
+    const handleMute = (isMute, userId) => {
+        console.log("mute", isMute)
+        let settled = false;
+        let interval = setInterval(() => {
+
+            if (localMediaStream.current) {
+
+                localMediaStream.current.getTracks()[0].enabled = !isMute
+
+                if (isMute) {
+                    socket.current.emit(ACTIONS.MUTE, { roomId, userId })
+                }
+                else {
+                    socket.current.emit(ACTIONS.UNMUTE, { roomId, userId })
+                }
+
+                settled=true;
+            }
+            if(settled) {
+                clearInterval(interval)
+            }
+        }, 200)
+
+    }
+
+
+
+
+    return { clients, provideRef, handleMute }
 }

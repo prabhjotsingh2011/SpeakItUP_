@@ -1,5 +1,5 @@
-import React, { useState,useEffect } from 'react'
-import { useParams,useHistory } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useParams, useHistory } from 'react-router-dom'
 import { useWebRTC } from '../../hooks/useWebRTC'
 import { useSelector } from 'react-redux'
 import styles from './Room.module.css'
@@ -9,28 +9,44 @@ const Room = () => {
     const { id: roomId } = useParams()
     const user = useSelector(state => state.auth.user)
 
-    const { clients, provideRef } = useWebRTC(roomId, user);
+    const { clients, provideRef, handleMute } = useWebRTC(roomId, user);
 
-    const history=useHistory()
-    const [room,setRoom]=useState(null)
-    const handleManualLeave=()=>{
-            
-            history.push('/rooms')
+    const [isMute, setIsMute] = useState(true)
+
+    const history = useHistory()
+    const [room, setRoom] = useState(null)
+    const handleManualLeave = () => {
+
+        history.push('/rooms')
     }
 
-    useEffect(()=>{
-        const fetchRoom=async()=>{
-            const {data} =await getRoom(roomId)
+    useEffect(() => {
+
+        handleMute(isMute, user.id)
+    }, [isMute])
+
+
+    useEffect(() => {
+        const fetchRoom = async () => {
+            const { data } = await getRoom(roomId)
             setRoom(data[0])
         };
         fetchRoom()
-    },[roomId])
+    }, [roomId])
+
+
+
+    const handleMuteClick = (clientId) => {
+
+        if (clientId !== user.id) return;
+        setIsMute(!isMute)
+    }
 
     return (
         <div>
             <div className='container'>
                 <button className={styles.goBack} onClick={handleManualLeave}>
-                    <img src='/images/arrow1.png' alt="arrow"  />
+                    <img src='/images/arrow1.png' alt="arrow" />
                     <span>All VoiceRooms</span>
                 </button>
             </div>
@@ -50,7 +66,7 @@ const Room = () => {
 
                     {
                         clients.map(client => {
-                            return(
+                            return (
 
                                 <div key={client.id} className={styles.userHead}>
                                     <audio
@@ -61,15 +77,22 @@ const Room = () => {
 
                                     <img className={styles.userAvatar} src={client.avatar} alt="avatar" />
 
-                                    <button className={styles.micBtn}>
-                                        {/* <img
-                                            src="/images/mic.png"
-                                            alt="mic-icon"
-                                        /> */}
-                                        <img
-                                            src="/images/mic_off.png"
-                                            alt="mic-mute-icon"
-                                        />
+                                    <button className={styles.micBtn} onClick={() => handleMuteClick(client.id)}>
+
+                                        {
+                                            client.muted
+                                                ?
+                                                <img
+                                                    src="/images/flag.png"
+                                                    alt="mic-icon"
+                                                />
+                                                :
+                                                <img
+                                                    src="/images/mic_off.png"
+                                                    alt="mic-mute-icon"
+                                                />
+                                        }
+
                                     </button>
                                     <h4>{client.name}</h4>
                                 </div>
